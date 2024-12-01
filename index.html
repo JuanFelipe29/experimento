@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Segunda Ley de Newton - Presentado por Franyerlin Padilla</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            background-color: #e0f7fa;
+        }
+        #animationCanvas {
+            border: 1px solid #ccc;
+            background: linear-gradient(to bottom, #87CEEB, #ffffff 50%);
+        }
+        .road {
+            position: relative;
+            bottom: 0;
+            width: 100%;
+            height: 60px;
+            background: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center">Segunda Ley de Newton</h1>
+        <p class="text-center text-muted">Presentado por <b>Franyerlin Padilla</b></p>
+
+        <form id="experimentForm" class="mt-4">
+            <div class="row">
+                <div class="col-md-4">
+                    <label for="mass" class="form-label">Masa del carro (kg):</label>
+                    <input type="number" class="form-control" id="mass" step="0.1" required>
+                </div>
+                <div class="col-md-4">
+                    <label for="force" class="form-label">Fuerza aplicada (N):</label>
+                    <input type="number" class="form-control" id="force" step="0.1" required>
+                </div>
+                <div class="col-md-4">
+                    <label for="time" class="form-label">Tiempo de simulación (s):</label>
+                    <input type="number" class="form-control" id="time" step="0.1" required>
+                </div>
+            </div>
+            <button type="button" class="btn btn-primary mt-4" id="startSimulation">Iniciar Simulación</button>
+        </form>
+
+        <div class="mt-5 position-relative">
+            <canvas id="animationCanvas" width="800" height="300"></canvas>
+            
+        </div>
+
+        <div class="mt-4">
+            <h4>Resultados:</h4>
+            <p><b>Aceleración calculada:</b> <span id="accelerationResult">-</span> m/s²</p>
+            <p><b>Distancia recorrida:</b> <span id="distanceResult">-</span> m</p>
+        </div>
+
+        <div class="mt-4">
+            <h4>Gráfica de Movimiento:</h4>
+            <canvas id="motionChart" width="800" height="400"></canvas>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('experimentForm');
+        const canvas = document.getElementById('animationCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const accelerationResult = document.getElementById('accelerationResult');
+        const distanceResult = document.getElementById('distanceResult');
+
+        const chartCanvas = document.getElementById('motionChart');
+        let motionChart;
+
+        const startButton = document.getElementById('startSimulation');
+
+        startButton.addEventListener('click', () => {
+            const mass = parseFloat(document.getElementById('mass').value);
+            const force = parseFloat(document.getElementById('force').value);
+            const time = parseFloat(document.getElementById('time').value);
+
+            if (isNaN(mass) || isNaN(force) || isNaN(time)) {
+                alert('Por favor, ingresa valores válidos en todos los campos.');
+                return;
+            }
+
+            // Calcular aceleración y distancia
+            const acceleration = force / mass;
+            const totalDistance = 0.5 * acceleration * Math.pow(time, 2);
+
+            // Mostrar resultados
+            accelerationResult.textContent = acceleration.toFixed(2);
+            distanceResult.textContent = totalDistance.toFixed(2);
+
+            // Limpiar canvas y reiniciar animación y gráfica
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            simulateMotion(acceleration, time, totalDistance);
+            plotMotionChart(acceleration, time);
+        });
+
+        function simulateMotion(acceleration, time, totalDistance) {
+            const carWidth = 50;
+            const carHeight = 25;
+            let x = 0;
+            let velocity = 0;
+            const fps = 60;
+            const dt = 1 / fps;
+            const roadHeight = canvas.height - 60;
+
+            const interval = setInterval(() => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                // Fondo con paisaje
+                drawBackground();
+
+                // Calcular nueva posición
+                velocity += acceleration * dt;
+                x += velocity * dt * (canvas.width / totalDistance);
+
+                // Dibujar carro
+                ctx.fillStyle = 'red';
+                ctx.fillRect(x, roadHeight - carHeight, carWidth, carHeight);
+
+                // Detener animación al final
+                if (x >= canvas.width || time <= 0) {
+                    clearInterval(interval);
+                }
+            }, 1000 / fps);
+        }
+
+        function drawBackground() {
+            // Cielo
+            ctx.fillStyle = '#87CEEB';
+            ctx.fillRect(0, 0, canvas.width, canvas.height / 2);
+
+            // Pasto
+            ctx.fillStyle = '#32CD32';
+            ctx.fillRect(0, canvas.height / 2, canvas.width, canvas.height / 2);
+
+            // Carretera
+            ctx.fillStyle = '#333';
+            ctx.fillRect(0, canvas.height - 60, canvas.width, 60);
+
+            // Líneas de la carretera
+            for (let i = 0; i < canvas.width; i += 40) {
+                ctx.fillStyle = '#FFF';
+                ctx.fillRect(i, canvas.height - 40, 20, 5);
+            }
+        }
+
+        function plotMotionChart(acceleration, time) {
+            const data = [];
+            const labels = [];
+            const dt = 0.1;
+
+            for (let t = 0; t <= time; t += dt) {
+                const distance = 0.5 * acceleration * Math.pow(t, 2);
+                data.push(distance);
+                labels.push(t.toFixed(1));
+            }
+
+            if (motionChart) motionChart.destroy();
+
+            motionChart = new Chart(chartCanvas, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Posición del carro (m)',
+                        data: data,
+                        borderColor: 'red',
+                        borderWidth: 2,
+                        fill: false
+                    }]
+                },
+                options: {
+                    scales: {
+                        x: { title: { display: true, text: 'Tiempo (s)' } },
+                        y: { title: { display: true, text: 'Posición (m)' } }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
